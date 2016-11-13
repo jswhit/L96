@@ -162,7 +162,11 @@ def ensrf(ensemble,xmean,xprime,h,obs,oberrvar,covlocal,method=1,z=None):
 
 # define localization matrix.
 covlocal = np.eye(ndim)
-xdep = 1.+model.blend # localization is doubled at either end of domain
+# zonally varying localization
+xdep = model.diff_min + (model.diff_max-model.diff_min)*model.blend
+# constant localization
+#xdep = np.ones(ndim)
+
 if corrl < 2*ndim:
     for j in range(ndim):
         for i in range(ndim):
