@@ -267,9 +267,10 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False):
         # this is equivalent, but a little faster
         xprime = np.dot(enswts[:,0:nanals].T,xprime2)/scalefact
         xprime_mean = np.abs(xprime.mean(axis=0))
+        #xprime = xprime-xprime_mean
         # make sure mean of posterior perts is zero
-        if xprime_mean.max() > 1.e-13:
-            raise ValueError('nonzero perturbation mean')
+        #if xprime_mean.max() > 1.e-6:
+        #    raise ValueError('nonzero perturbation mean')
 
     return xmean, xprime
 
