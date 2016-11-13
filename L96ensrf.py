@@ -162,13 +162,14 @@ def ensrf(ensemble,xmean,xprime,h,obs,oberrvar,covlocal,method=1,z=None):
 
 # define localization matrix.
 covlocal = np.eye(ndim)
+xdep = 1.+model.blend # localization is doubled at either end of domain
 if corrl < 2*ndim:
     for j in range(ndim):
         for i in range(ndim):
             rr = float(i-j)
             if i-j < -(ndim/2): rr = float(ndim-j+i)
             if i-j > (ndim/2): rr = float(i-ndim-j)
-            r = np.fabs(rr)/corrl; taper = 0.0
+            r = np.fabs(rr)/(xdep[i]*corrl); taper = 0.0
             # Bohman taper (Gneiting 2002, doi:10.1006/jmva.2001.2056,
             # equation, eq 21)
             #if r < 1.:
