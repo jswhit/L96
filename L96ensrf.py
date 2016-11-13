@@ -48,8 +48,8 @@ if len(sys.argv) > 5:
     covinflate2 = float(sys.argv[6])
 
 ntstart = 1000 # time steps to spin up truth run
-ntimes = 11000 # ob times
-nens = 10 # ensemble members
+ntimes = 101000 # ob times
+nens = 7 # ensemble members
 oberrstdev = 0.1; oberrvar = oberrstdev**2 # ob error
 verbose = False # print error stats every time if True
 # Gaussian or running average smoothing in H.
