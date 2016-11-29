@@ -228,11 +228,11 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False):
     scalefact = np.sqrt(float(nanals2-1)/float(nanals-1))*z[-1]
     # forward operator.
     hxprime = np.empty((nanals2, nobs), xprime2.dtype)
-    #hxprime_orig = np.empty((nanals, nobs), xprime.dtype)
+    hxprime_orig = np.empty((nanals, nobs), xprime.dtype)
     for nanal in range(nanals2):
         hxprime[nanal] = np.dot(h,xprime2[nanal])
-    #for nanal in range(nanals):
-    #    hxprime_orig[nanal] = np.dot(h,xprime[nanal])
+    for nanal in range(nanals):
+        hxprime_orig[nanal] = np.dot(h,xprime[nanal])
     hxmean = np.dot(h,xmean)
 
     YbRinv = np.dot(hxprime,(1./oberrvar)*np.eye(nobs))
@@ -246,7 +246,7 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False):
         # make sure ob noise has zero mean and correct stdev.
         obnoise =\
         np.sqrt(oberrvar*float(nanals)/float(nanals-1))*rs.standard_normal(size=(nanals,nobs))
-        hxprime = obnoise - obnoise.mean(axis=0) + hxprime[0:nanals]/scalefact
+        hxprime = obnoise - obnoise.mean(axis=0) + hxprime_orig
         xprime = xprime - np.dot(kfgain,hxprime.T).T
     else:
         # compute reduced gain to update perts
