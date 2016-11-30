@@ -156,7 +156,7 @@ def getkf(xmean,xprime,h,obs,oberrvar):
     hxmean = np.dot(h,xmean)
     sqrtoberrvar_inv = 1./np.sqrt(oberrvar)
     YbRsqrtinv = hxprime * sqrtoberrvar_inv
-    u, s, v = svd(YbRsqrtinv,full_matrices=False)
+    u, s, v = svd(YbRsqrtinv,full_matrices=False,lapack_driver='gesvd')
     sp = s**2+nanals-1
     painv =  (u * (1./sp)).dot(u.T)
     kfgain = np.dot(xprime.T,np.dot(painv,YbRsqrtinv*sqrtoberrvar_inv))
@@ -198,7 +198,7 @@ def getkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False):
     hxmean = np.dot(h,xmean)
     sqrtoberrvar_inv = 1./np.sqrt(oberrvar)
     YbRsqrtinv = hxprime * sqrtoberrvar_inv
-    u, s, v = svd(YbRsqrtinv,full_matrices=False)
+    u, s, v = svd(YbRsqrtinv,full_matrices=False,lapack_driver='gesvd')
     sp = s**2+nanals2-1
     painv =  (u * (1./sp)).dot(u.T)
     kfgain = np.dot(xprime2.T,np.dot(painv,YbRsqrtinv*sqrtoberrvar_inv))
