@@ -29,6 +29,7 @@ method:  =0 for serial Potter method
          =8 for bulk EnKF (all obs at once) with perturbed obs.
          =9 for GETKF (no localization applied)
          =10 for GETKF (with modulated ensemble)
+         =11 for ETKF with modulation ensemble and stochastic subsampling
 
 covinflate1,covinflate2:  (optional) inflation parameters corresponding
 to a and b in Hodyss and Campbell.  If not specified, a=b=1. If covinflate2
@@ -157,6 +158,8 @@ def ensrf(ensemble,xmean,xprime,h,obs,oberrvar,covlocal,method=1,z=None):
         return getkf(xmean,xprime,h,obs,oberrvar)
     elif method == 10: # getkf with modulated ensemble
         return getkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=rsens,po=True)
+    elif method == 11: # etkf using 'modulated' ensemble and stochastic subsample
+        return etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=rsens,ss=True)
     else:
         raise ValueError('illegal value for enkf method flag')
 
@@ -164,6 +167,10 @@ def ensrf(ensemble,xmean,xprime,h,obs,oberrvar,covlocal,method=1,z=None):
 covlocal = np.eye(ndim)
 # zonally varying localization
 xdep = model.diff_min + (model.diff_max-model.diff_min)*model.blend
+#import matplotlib.pyplot as plt
+#plt.plot(np.arange(80), xdep*corrl)
+#plt.show()
+#raise SystemExit
 # constant localization
 #xdep = np.ones(ndim)
 
@@ -189,7 +196,7 @@ if corrl < 2*ndim:
             covlocal[j,i]=taper
 
 # compute square root of covlocal
-if method in [4,5,6,10]:
+if method in [4,5,6,10,11]:
     evals, eigs = np.linalg.eigh(covlocal)
     evals = np.where(evals > 1.e-10, evals, 1.e-10)
     evalsum = evals.sum(); neig = 0

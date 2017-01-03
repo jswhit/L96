@@ -100,7 +100,6 @@ def bulk_ensrf(xmean,xprime,h,obs,oberrvar,covlocal):
     tmpinv = cho_solve(cho_factor(tmp),np.eye(nobs))
     gainfact = np.dot(Dsqrt,tmpinv)
     reducedgain = np.dot(kfgain, gainfact)
-    print reducedgain.min(), reducedgain.max(), reducedgain.shape
     xmean = xmean + np.dot(kfgain, obs-np.dot(h,xmean))
     hxprime = np.empty((nanals, nobs), xprime.dtype)
     for nanal in range(nanals):
@@ -208,7 +207,7 @@ def getkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False):
     xprime = xprime - np.dot(reducedgain,hxprime_orig.T).T
     return xmean, xprime
 
-def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False):
+def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False,ss=False):
     """ETKF with modulated ensemble."""
     nanals, ndim = xprime.shape; nobs = obs.shape[-1]
     if z is None:
@@ -220,12 +219,24 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False):
         for nanal in range(nanals):
             xprime2[nanal2,:] = xprime[nanal,:]*z[neig-j-1,:]
             nanal2 += 1
-    xprime2 = np.sqrt(float(nanals2-1)/float(nanals-1))*xprime2
+    normfact = np.sqrt(float(nanals2-1)/float(nanals-1))
+    xprime2 = normfact*xprime2
     #var = ((xprime**2).sum(axis=0)/(nanals-1)).mean()
     #var2 = ((xprime2**2).sum(axis=0)/(nanals2-1)).mean()
     # 1st nanals members are original members multiplied by scalefact
     # (which is proportional to 1st eigenvector of cov local matrix)
-    scalefact = np.sqrt(float(nanals2-1)/float(nanals-1))*z[-1]
+    scalefact = normfact*z[-1]
+    #import matplotlib.pyplot as plt
+    #plt.plot(np.arange(80), z[-1])
+    #plt.title('1st eigenvector of localization matrix')
+    #plt.xlabel('j')
+    #plt.ylabel('eigenvector amplitude')
+    #plt.ylim(-1.2,0.2)
+    #plt.axhline(0,color='k')
+    #plt.savefig('eig1.png')
+    #print z[-1].max(),z[-1].min()
+    #plt.show()
+    #raise SystemExit
     # forward operator.
     hxprime = np.empty((nanals2, nobs), xprime2.dtype)
     hxprime_orig = np.empty((nanals, nobs), xprime.dtype)
@@ -248,6 +259,23 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False):
         np.sqrt(oberrvar*float(nanals)/float(nanals-1))*rs.standard_normal(size=(nanals,nobs))
         hxprime = obnoise - obnoise.mean(axis=0) + hxprime_orig
         xprime = xprime - np.dot(kfgain,hxprime.T).T
+    elif ss: # use stochastic subsampling to select posterior perturbations.
+        pasqrt_inv, painv = symsqrtinv_psd(pa)
+        enswts = np.sqrt(nanals2-1)*pasqrt_inv
+        xprime_full = np.dot(enswts.T,xprime2)
+        # stochastic sub-sampling (nanals random linear combos of nanals
+        # posterior perturbations)
+        #print ((xprime_full**2).sum(axis=0)/(nanals2-1)).mean()
+        ranwts = rs.standard_normal(size=(nanals,nanals2))/np.sqrt(nanals2-1)
+        ranwts_mean = ranwts.mean(axis=1)
+        # make sure weights sum to zero and stdev=1
+        ranwts = ranwts - ranwts_mean[:,np.newaxis]
+        ranwts_stdev = np.sqrt((ranwts**2).sum(axis=1))
+        ranwts = ranwts/ranwts_stdev[:,np.newaxis]
+        xprime = np.dot(ranwts,xprime_full)
+        #print ((xprime**2).sum(axis=0)/(nanals-1)).mean()
+        #raise SystemExit
+        xprime = xprime - xprime.mean(axis=0)
     else:
         # compute reduced gain to update perts
         #D = np.dot(hxprime.T, hxprime)/(nanals2-1) + oberrvar*np.eye(nobs)
@@ -266,7 +294,7 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False):
         #xprime = xprime2[0:nanals]/scalefact
         # this is equivalent, but a little faster
         xprime = np.dot(enswts[:,0:nanals].T,xprime2)/scalefact
-        xprime_mean = np.abs(xprime.mean(axis=0))
+        #xprime_mean = np.abs(xprime.mean(axis=0))
         #xprime = xprime-xprime_mean
         # make sure mean of posterior perts is zero
         #if xprime_mean.max() > 1.e-6:
