@@ -260,19 +260,21 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False,ss=False
         # remove part of obnoise that lies in suspace of hxprime
         cxy = np.dot(hxprime_orig,obnoise.T)
         cxx = np.dot(hxprime_orig,hxprime_orig.T)
-        # compute inverse of cxx
-        #evals, eigs = eigh(cxx)
+        # compute inverse of cxx (has rank nanals-1)
+        evals, eigs = eigh(cxx)
         # first eigenvalue is zero.
-        #evalsinv = np.zeros(evals.shape, evals.dtype)
-        #evalsinv[1:] = 1./evals[1:]
-        #eigs[:,0]=0.0 # set 1st eigenvector to zero
-        #cxxinv =  (eigs * evalsinv).dot(eigs.T)
-        #cxxinv = pinvh(cxx) # pseudo-inverse of a symmetrix matrix
-        # cholesky inverse
-        cxxinv = cho_solve(cho_factor(cxx),np.eye(nanals))
+        evalsinv = np.zeros(evals.shape, evals.dtype)
+        evalsinv[1:] = 1./evals[1:]
+        eigs[:,0]=0.0 # set 1st eigenvector to zero
+        cxxinv =  (eigs * evalsinv).dot(eigs.T)
+        # pseudo-inverse of a symmetrix matrix (same as above)
+        #cxxinv = pinvh(cxx) 
+        # compute multivariate regression matrix, find part of obnoise that
+        # is linearly related to hxprime, subract from obnoise.
         obnoise = obnoise - np.dot(np.dot(cxy,cxxinv),obnoise)
-        # rescale so obnoise has correct variance.
-        obnoise = np.sqrt(oberrvar/((obnoise**2).sum(axis=0)/(nanals-1)))*obnoise
+        # rescale so obnoise has expected variance.
+        obnoise=np.sqrt(oberrvar/((obnoise**2).sum(axis=0)/(nanals-1)))*obnoise
+        #obnoise=np.sqrt(oberrvar/((obnoise**2).sum(axis=0)/(nanals-1)).mean())*obnoise
         hxprime = obnoise  + hxprime_orig
         xprime = xprime - np.dot(kfgain,hxprime.T).T
     elif ss: # use stochastic subsampling to select posterior perturbations.
