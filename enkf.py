@@ -1,6 +1,6 @@
 import numpy as np
 from numpy.linalg import eigh # scipy.linalg.eigh broken on my mac
-from scipy.linalg import cho_solve, cho_factor, svd
+from scipy.linalg import cho_solve, cho_factor, svd, pinvh
 
 def symsqrt_psd(a, inv=False):
     """symmetric square-root of a symmetric positive definite matrix"""
@@ -260,12 +260,16 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False,ss=False
         # remove part of obnoise that lies in suspace of hxprime
         cxy = np.dot(hxprime_orig,obnoise.T)
         cxx = np.dot(hxprime_orig,hxprime_orig.T)
-        evals, eigs = eigh(cxx)
+        # compute inverse of cxx
+        #evals, eigs = eigh(cxx)
         # first eigenvalue is zero.
-        evalsinv = np.zeros(evals.shape, evals.dtype)
-        evalsinv[1:] = 1./evals[1:]
-        eigs[:,0]=0.0 # set 1st eigenvector to zero
-        cxxinv =  (eigs * evalsinv).dot(eigs.T)
+        #evalsinv = np.zeros(evals.shape, evals.dtype)
+        #evalsinv[1:] = 1./evals[1:]
+        #eigs[:,0]=0.0 # set 1st eigenvector to zero
+        #cxxinv =  (eigs * evalsinv).dot(eigs.T)
+        #cxxinv = pinvh(cxx) # pseudo-inverse of a symmetrix matrix
+        # cholesky inverse
+        cxxinv = cho_solve(cho_factor(cxx),np.eye(nanals))
         obnoise = obnoise - np.dot(np.dot(cxy,cxxinv),obnoise)
         # rescale so obnoise has correct variance.
         obnoise = np.sqrt(oberrvar/((obnoise**2).sum(axis=0)/(nanals-1)))*obnoise
