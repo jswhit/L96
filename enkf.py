@@ -1,6 +1,6 @@
 import numpy as np
-from numpy.linalg import eigh # scipy.linalg.eigh broken on my mac
-from scipy.linalg import cho_solve, cho_factor, svd, pinvh
+#from numpy.linalg import eigh # scipy.linalg.eigh broken on my mac
+from scipy.linalg import eigh, cho_solve, cho_factor, svd, pinvh
 
 def symsqrt_psd(a, inv=False):
     """symmetric square-root of a symmetric positive definite matrix"""
@@ -251,7 +251,7 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False,ss=False
     pasqrt_inv, painv = symsqrtinv_psd(pa)
     kfgain = np.dot(xprime2.T,np.dot(painv,YbRinv))
     xmean = xmean + np.dot(kfgain, obs-hxmean)
-    if po: # use perturbed obs instead deterministic EnKF for ensperts.
+    if po: # use perturbed obs to update ensemble perts
         if rs is None:
             raise ValueError('must pass random state if po=True')
         # generate obnoise, make sure it has zero mean
@@ -265,12 +265,12 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False,ss=False
         # first eigenvalue is zero.
         evalsinv = np.zeros(evals.shape, evals.dtype)
         evalsinv[1:] = 1./evals[1:]
-        eigs[:,0]=0.0 # set 1st eigenvector to zero
+        eigs[:,0] = 0 # set 1st eigenvector to zero
         cxxinv =  (eigs * evalsinv).dot(eigs.T)
         # pseudo-inverse of a symmetrix matrix (same as above)
         #cxxinv = pinvh(cxx) 
         # compute multivariate regression matrix, find part of obnoise that
-        # is linearly related to hxprime, subract from obnoise.
+        # is linearly related to hxprime, subtract from obnoise.
         obnoise = obnoise - np.dot(np.dot(cxy,cxxinv),obnoise)
         # rescale so obnoise has expected variance.
         obnoise=np.sqrt(oberrvar/((obnoise**2).sum(axis=0)/(nanals-1)))*obnoise
