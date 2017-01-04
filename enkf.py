@@ -254,9 +254,20 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False,ss=False
     if po: # use perturbed obs instead deterministic EnKF for ensperts.
         if rs is None:
             raise ValueError('must pass random state if po=True')
-        # make sure ob noise has zero mean and correct stdev.
+        # generate obnoise, make sure it has zero mean
         obnoise = rs.standard_normal(size=(nanals,nobs))
         obnoise = obnoise - obnoise.mean(axis=0)
+        # remove part of obnoise that lies in suspace of hxprime
+        cxy = np.dot(hxprime_orig,obnoise.T)
+        cxx = np.dot(hxprime_orig,hxprime_orig.T)
+        evals, eigs = eigh(cxx)
+        # first eigenvalue is zero.
+        evalsinv = np.zeros(evals.shape, evals.dtype)
+        evalsinv[1:] = 1./evals[1:]
+        eigs[:,0]=0.0 # set 1st eigenvector to zero
+        cxxinv =  (eigs * evalsinv).dot(eigs.T)
+        obnoise = obnoise - np.dot(np.dot(cxy,cxxinv),obnoise)
+        # rescale so obnoise has correct variance.
         obnoise = np.sqrt(oberrvar/((obnoise**2).sum(axis=0)/(nanals-1)))*obnoise
         hxprime = obnoise  + hxprime_orig
         xprime = xprime - np.dot(kfgain,hxprime.T).T
