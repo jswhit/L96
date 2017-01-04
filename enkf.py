@@ -255,9 +255,10 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False,ss=False
         if rs is None:
             raise ValueError('must pass random state if po=True')
         # make sure ob noise has zero mean and correct stdev.
-        obnoise =\
-        np.sqrt(oberrvar*float(nanals)/float(nanals-1))*rs.standard_normal(size=(nanals,nobs))
-        hxprime = obnoise - obnoise.mean(axis=0) + hxprime_orig
+        obnoise = rs.standard_normal(size=(nanals,nobs))
+        obnoise = obnoise - obnoise.mean(axis=0)
+        obnoise = np.sqrt(oberrvar/((obnoise**2).sum(axis=0)/(nanals-1)))*obnoise
+        hxprime = obnoise  + hxprime_orig
         xprime = xprime - np.dot(kfgain,hxprime.T).T
     elif ss: # use stochastic subsampling to select posterior perturbations.
         pasqrt_inv, painv = symsqrtinv_psd(pa)
