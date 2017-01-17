@@ -51,7 +51,7 @@ if len(sys.argv) > 5:
 ntstart = 1000 # time steps to spin up truth run
 ntimes = 101000 # ob times
 nens = 8 # ensemble members
-oberrstdev = 0.5; oberrvar = oberrstdev**2 # ob error
+oberrstdev = 0.1; oberrvar = oberrstdev**2 # ob error
 verbose = False # print error stats every time if True
 # Gaussian or running average smoothing in H.
 # for running average, smooth_len is half-width of boxcar.
