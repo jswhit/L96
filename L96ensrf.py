@@ -30,6 +30,7 @@ method:  =0 for serial Potter method
          =9 for GETKF (no localization applied)
          =10 for GETKF (with modulated ensemble)
          =11 for ETKF with modulation ensemble and stochastic subsampling
+         =12 for ETKF with modulation ensemble and 'adjusted' perturbed obs
 
 covinflate1,covinflate2:  (optional) inflation parameters corresponding
 to a and b in Hodyss and Campbell.  If not specified, a=b=1. If covinflate2
@@ -72,9 +73,10 @@ rstruth = np.random.RandomState(42) # fixed seed for truth run
 rsens = np.random.RandomState() # varying seed for ob noise and ensemble initial conditions
 
 # model instance for truth (nature) run
-model = L96(n=npts,F=8,dt=dt,diff_max=diffusion_truth_max,diff_min=diffusion_truth_min,rs=rstruth)
-# mode instance for forecast ensemble
-ensemble = L96(n=npts,members=nens,dt=dt,diff_max=diffusion_truth_max,diff_min=diffusion_truth_min,rs=rsens)
+F = 8; deltaF = 1./8.; Fcorr = np.exp(-1)**3 # efolding over n timesteps, n=3
+model = L96(n=npts,F=F,deltaF=deltaF,Fcorr=Fcorr,dt=dt,diff_max=diffusion_truth_max,diff_min=diffusion_truth_min,rs=rstruth)
+# model instance for forecast ensemble
+ensemble = L96(n=npts,F=F,deltaF=deltaF,Fcorr=Fcorr,members=nens,dt=dt,diff_max=diffusion_truth_max,diff_min=diffusion_truth_min,rs=rsens)
 for nt in range(ntstart): # spinup truth run
     model.advance()
 
@@ -160,6 +162,8 @@ def ensrf(ensemble,xmean,xprime,h,obs,oberrvar,covlocal,method=1,z=None):
         return getkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=rsens,po=True)
     elif method == 11: # etkf using 'modulated' ensemble and stochastic subsample
         return etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=rsens,ss=True)
+    elif method == 12: # etkf using 'modulated' ensemble w/ 'adjusted' pert obs
+        return etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=rsens,po=True,adjust_obnoise=True)
     else:
         raise ValueError('illegal value for enkf method flag')
 
@@ -196,7 +200,7 @@ if corrl < 2*ndim:
             covlocal[j,i]=taper
 
 # compute square root of covlocal
-if method in [4,5,6,10,11]:
+if method in [4,5,6,10,11,12]:
     evals, eigs = np.linalg.eigh(covlocal)
     evals = np.where(evals > 1.e-10, evals, 1.e-10)
     evalsum = evals.sum(); neig = 0

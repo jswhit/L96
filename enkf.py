@@ -207,7 +207,7 @@ def getkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False):
     xprime = xprime - np.dot(reducedgain,hxprime_orig.T).T
     return xmean, xprime
 
-def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False,ss=False):
+def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False,ss=False,adjust_obnoise=False):
     """ETKF with modulated ensemble."""
     nanals, ndim = xprime.shape; nobs = obs.shape[-1]
     if z is None:
@@ -257,24 +257,24 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False,ss=False
         # generate obnoise, make sure it has zero mean
         obnoise = rs.standard_normal(size=(nanals,nobs))
         obnoise = obnoise - obnoise.mean(axis=0)
-        # remove part of obnoise that lies in suspace of hxprime
-        cxy = np.dot(hxprime_orig,obnoise.T)
-        cxx = np.dot(hxprime_orig,hxprime_orig.T)
-        # compute inverse of cxx (has rank nanals-1)
-        evals, eigs = eigh(cxx)
-        # first eigenvalue is zero.
-        evalsinv = np.zeros(evals.shape, evals.dtype)
-        evalsinv[1:] = 1./evals[1:]
-        eigs[:,0] = 0 # set 1st eigenvector to zero
-        cxxinv =  (eigs * evalsinv).dot(eigs.T)
-        # pseudo-inverse of a symmetrix matrix (same as above)
-        #cxxinv = pinvh(cxx) 
-        # compute multivariate regression matrix, find part of obnoise that
-        # is linearly related to hxprime, subtract from obnoise.
-        obnoise = obnoise - np.dot(np.dot(cxy,cxxinv),obnoise)
+        if adjust_obnoise:
+            # remove part of obnoise that lies in suspace of hxprime
+            cxy = np.dot(hxprime_orig,obnoise.T)
+            cxx = np.dot(hxprime_orig,hxprime_orig.T)
+            # compute inverse of cxx (has rank nanals-1)
+            evals, eigs = eigh(cxx)
+            # first eigenvalue is zero.
+            evalsinv = np.zeros(evals.shape, evals.dtype)
+            evalsinv[1:] = 1./evals[1:]
+            eigs[:,0] = 0 # set 1st eigenvector to zero
+            cxxinv =  (eigs * evalsinv).dot(eigs.T)
+            # pseudo-inverse of a symmetrix matrix (same as above)
+            #cxxinv = pinvh(cxx)
+            # compute multivariate regression matrix, find part of obnoise that
+            # is linearly related to hxprime, subtract from obnoise.
+            obnoise = obnoise - np.dot(np.dot(cxy,cxxinv),obnoise)
         # rescale so obnoise has expected variance.
         obnoise=np.sqrt(oberrvar/((obnoise**2).sum(axis=0)/(nanals-1)))*obnoise
-        #obnoise=np.sqrt(oberrvar/((obnoise**2).sum(axis=0)/(nanals-1)).mean())*obnoise
         hxprime = obnoise  + hxprime_orig
         xprime = xprime - np.dot(kfgain,hxprime.T).T
     elif ss: # use stochastic subsampling to select posterior perturbations.

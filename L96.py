@@ -1,19 +1,25 @@
 """Lorenz 1996 model (with zonally varying damping)
-Lorenz E., 1996. Predictability: a problem partly solved. In 
+Lorenz E., 1996. Predictability: a problem partly solved. In
 Predictability. Proc 1995. ECMWF Seminar, 1-18."""
 import numpy as np
 
 class L96:
 
-    def __init__(self,members=1,n=40,dt=0.05,diff_max=1.0,diff_min=1.0,F=8,rs=None):
+    def __init__(self,members=1,n=40,dt=0.05,diff_max=1.0,diff_min=1.0,F=8,deltaF=0,Fcorr=1.,rs=None):
         self.n = n; self.dt = dt
         self.diff_max = diff_max; self.diff_min = diff_min
         self.F = F; self.members = members
+        self.deltaF = deltaF; self.Fcorr = Fcorr
         if rs is None:
             rs = np.random.RandomState()
-        self.x = F+0.1*rs.standard_normal(size=(members,n))
+        self.rs = rs
+        self.x = F+0.1*self.rs.standard_normal(size=(members,n))
         self.blend = np.cos(np.linspace(0,np.pi,n))**4
         self.xwrap = np.zeros((self.members,self.n+3), np.float)
+        if self.deltaF == 0:
+            self.forcing = self.F
+        else:
+            self.forcing = self.rs.gamma(self.F/self.deltaF, self.deltaF, size=(self.members,self.n))
 
     def shiftx(self):
         xwrap = self.xwrap
@@ -24,9 +30,23 @@ class L96:
 
     def dxdt(self):
         xm2,xm1,xp1 = self.shiftx()
-        return (xp1-xm2)*xm1 - (self.diff_min+(self.diff_max-self.diff_min)*self.blend)*self.x + self.F
+        return (xp1-xm2)*xm1 - \
+        (self.diff_min+(self.diff_max-self.diff_min)*self.blend)*self.x + self.forcing
 
     def advance(self):
+        # gamma distributed forcing with mean = self.F.  Approaches constant
+        # value self.F as deltaF approaches zero, more variability as deltaF
+        # increases. Forcing is random at every grid point, but correlated
+        # in time with lag-1 correlation of self.Fcorr.  Forcing
+        # is assumed constant over one time step (does not vary inside RK4).
+        # standard deviation is sqrt(F*deltaF)
+        if self.deltaF == 0:
+            self.forcing = self.F
+        else:
+            # adjust deltaF to preserve expected variance.
+            deltaF = self.deltaF/(1.-np.sqrt(self.Fcorr))
+            forcing = self.Fcorr*self.forcing + (1.-self.Fcorr)*self.rs.gamma(self.F/deltaF, deltaF, size=(self.members,self.n))
+            self.forcing = forcing
         h = self.dt; hh = 0.5*h; h6 = h/6.
         x = self.x
         dxdt1 = self.dxdt()
