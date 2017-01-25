@@ -1,5 +1,5 @@
 """Lorenz 1996 model animation (with zonally varying damping)
-Lorenz E., 1996. Predictability: a problem partly solved. In 
+Lorenz E., 1996. Predictability: a problem partly solved. In
 Predictability. Proc 1995. ECMWF Seminar, 1-18."""
 import numpy as np
 import matplotlib.pyplot as plt
@@ -11,7 +11,8 @@ nmax = 10000 # number of ob times.
 
 np.random.seed(42) # fix random seed for reproducibility
 
-model = L96(n=80,F=8,diff_max=2.5,diff_min=0.5) # model instance for truth run
+F = 8; deltaF = 1./8.; Fcorr = np.exp(-1)**3 # efolding over n timesteps, n=3
+model = L96(n=80,F=F,deltaF=deltaF,Fcorr=Fcorr,diff_max=2.5,diff_min=0.5) # model instance for truth run
 for nt in range(nspinup): # spinup truth run
     model.advance()
 
