@@ -273,6 +273,8 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False,ss=False
             # compute multivariate regression matrix, find part of obnoise that
             # is linearly related to hxprime, subtract from obnoise.
             obnoise = obnoise - np.dot(np.dot(cxy,cxxinv),obnoise)
+            # make sure mean is still zero
+            obnoise = obnoise - obnoise.mean(axis=0)
         # rescale so obnoise has expected variance.
         obnoise=np.sqrt(oberrvar/((obnoise**2).sum(axis=0)/(nanals-1)))*obnoise
         hxprime = obnoise  + hxprime_orig
