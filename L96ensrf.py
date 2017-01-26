@@ -198,6 +198,8 @@ if corrl < 2*ndim:
                 taper = (((( rr/12.0 -0.5 )*rr +0.625 )*rr +5.0/3.0 )*rr -5.0 )*rr \
                         + 4.0 - 2.0 / (3.0 * rr)
             covlocal[j,i]=taper
+    # symmetrize the covariance localization matrix
+    covlocal = 0.5*(covlocal + covlocal.transpose())
 
 # compute square root of covlocal
 if method in [4,5,6,10,11,12]:
