@@ -259,7 +259,7 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False,ss=False
         obnoise = obnoise - obnoise.mean(axis=0)
         if adjust_obnoise:
             # remove part of obnoise that lies in suspace of hxprime
-            cxy = np.dot(hxprime_orig,obnoise.T)
+            cxy = np.dot(obnoise, hxprime_orig.T)
             cxx = np.dot(hxprime_orig,hxprime_orig.T)
             # compute inverse of cxx (has rank nanals-1)
             evals, eigs = eigh(cxx)
@@ -272,7 +272,11 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False,ss=False
             #cxxinv = pinvh(cxx)
             # compute multivariate regression matrix, find part of obnoise that
             # is linearly related to hxprime, subtract from obnoise.
-            obnoise = obnoise - np.dot(np.dot(cxy,cxxinv),obnoise)
+            obnoise = obnoise - np.dot(np.dot(cxy,cxxinv), hxprime_orig)
+            # check that covariance is now zero
+            #cxy = np.dot(obnoise, hxprime_orig.T)
+            #print cxy.min(), cxy.max()
+            #raise SystemExit
             # make sure mean is still zero
             obnoise = obnoise - obnoise.mean(axis=0)
         # rescale so obnoise has expected variance.
