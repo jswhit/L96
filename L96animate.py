@@ -62,7 +62,7 @@ plt.xlabel('x')
 plt.ylabel('t')
 plt.colorbar()
 plt.title('time-longitude snapshot of modified L96 model')
-plt.savefig('covmat.png')
+plt.savefig('hovmuller.png')
 
 plt.figure()
 print cov.min(), cov.max()
