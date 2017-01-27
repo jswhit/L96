@@ -53,16 +53,25 @@ print tt.min(), tt.max()
 print uu.shape
 uup = uu - uu.mean(axis=0)
 print uup.shape
-cov = np.dot(uup.T,uup)
+cov = np.dot(uup.T,uup)/(ncount-1)
 print 'cov',cov.min(), cov.max(), cov.shape
 nplt = 500
-plt.contourf(x,tt[:nplt],uu[:nplt],31,cmap=plt.cm.spectral,extend='both')
+print uu[:nplt].min(), uu[:nplt].max()
+plt.contourf(x,tt[:nplt],uu[:nplt],np.linspace(-18,18,41),cmap=plt.cm.bwr,extend='both')
 plt.xlabel('x')
 plt.ylabel('t')
 plt.colorbar()
-plt.title('chaotic solution of the L96 model')
+plt.title('time-longitude snapshot of modified L96 model')
+plt.savefig('covmat.png')
 
 plt.figure()
-plt.pcolormesh(x,x,cov,cmap=plt.cm.spectral)
+print cov.min(), cov.max()
+plt.pcolormesh(x,x,cov,cmap=plt.cm.bwr,vmin=-30,vmax=30)
+plt.title('climatological covariance matrix for modified L96 model')
+plt.xlabel('grid index')
+plt.ylabel('grid index')
+plt.colorbar()
+plt.savefig('covmat.png')
+
 
 plt.show()
