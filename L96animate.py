@@ -11,7 +11,7 @@ nmax = 10000 # number of ob times.
 
 np.random.seed(42) # fix random seed for reproducibility
 
-F = 8; deltaF = 1./8.; Fcorr = np.exp(-1)**3 # efolding over n timesteps, n=3
+F = 8; deltaF = 1./8.; Fcorr = np.exp(-1)**(1./3.) # efolding over n timesteps, n=3
 model = L96(n=80,F=F,deltaF=deltaF,Fcorr=Fcorr,diff_max=2.5,diff_min=0.5) # model instance for truth run
 for nt in range(nspinup): # spinup truth run
     model.advance()

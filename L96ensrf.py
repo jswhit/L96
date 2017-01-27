@@ -73,7 +73,7 @@ rstruth = np.random.RandomState(42) # fixed seed for truth run
 rsens = np.random.RandomState() # varying seed for ob noise and ensemble initial conditions
 
 # model instance for truth (nature) run
-F = 8; deltaF = 1./8.; Fcorr = np.exp(-1)**3 # efolding over n timesteps, n=3
+F = 8; deltaF = 1./8.; Fcorr = np.exp(-1)**(1./3.) # efolding over n timesteps, n=3
 model = L96(n=npts,F=F,deltaF=deltaF,Fcorr=Fcorr,dt=dt,diff_max=diffusion_truth_max,diff_min=diffusion_truth_min,rs=rstruth)
 # model instance for forecast ensemble
 ensemble = L96(n=npts,F=F,deltaF=deltaF,Fcorr=Fcorr,members=nens,dt=dt,diff_max=diffusion_truth_max,diff_min=diffusion_truth_min,rs=rsens)
@@ -171,6 +171,7 @@ def ensrf(ensemble,xmean,xprime,h,obs,oberrvar,covlocal,method=1,z=None):
 covlocal = np.eye(ndim)
 # zonally varying localization
 xdep = model.diff_min + (model.diff_max-model.diff_min)*model.blend
+#xdep[:] = 1.0 # set back to constant
 #import matplotlib.pyplot as plt
 #plt.plot(np.arange(80), xdep*corrl)
 #plt.show()
