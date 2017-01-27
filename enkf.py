@@ -234,7 +234,7 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False,ss=False
     #plt.ylim(-1.2,0.2)
     #plt.axhline(0,color='k')
     #plt.savefig('eig1.png')
-    #print z[-1].max(),z[-1].min()
+    #print np.abs(z[-1]).max()/np.abs(z[-1]).min()
     #plt.show()
     #raise SystemExit
     # forward operator.
@@ -261,32 +261,28 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False,ss=False
             # remove part of obnoise that lies in suspace of hxprime
             cxy = np.dot(obnoise, hxprime_orig.T)
             cxx = np.dot(hxprime_orig,hxprime_orig.T)
-            # compute inverse of cxx (has rank nanals-1)
-            evals, eigs = eigh(cxx)
-            # first eigenvalue is zero.
-            evalsinv = np.zeros(evals.shape, evals.dtype)
-            evalsinv[1:] = 1./evals[1:]
-            eigs[:,0] = 0 # set 1st eigenvector to zero
-            cxxinv =  (eigs * evalsinv).dot(eigs.T)
             # pseudo-inverse of a symmetrix matrix (same as above)
-            #cxxinv = pinvh(cxx)
+            cxxinv = pinvh(cxx)
             # compute multivariate regression matrix, find part of obnoise that
             # is linearly related to hxprime, subtract from obnoise.
             obnoise = obnoise - np.dot(np.dot(cxy,cxxinv), hxprime_orig)
-            # check that covariance is now zero
-            #cxy = np.dot(obnoise, hxprime_orig.T)
-            #print cxy.min(), cxy.max()
-            #raise SystemExit
             # make sure mean is still zero
             obnoise = obnoise - obnoise.mean(axis=0)
         # rescale so obnoise has expected variance.
-        obnoise=np.sqrt(oberrvar/((obnoise**2).sum(axis=0)/(nanals-1)))*obnoise
+        #obnoise=np.sqrt(oberrvar/((obnoise**2).sum(axis=0)/(nanals-1)))*obnoise
+        obnoise=np.sqrt(oberrvar/(((obnoise**2).sum(axis=0)/(nanals-1))).mean())*obnoise
+        # check that cross-covariance really is zero
+        #cxy = np.dot(obnoise, hxprime_orig.T)
+        #print cxy.min(), cxy.max()
+        #raise SystemExit
         hxprime = obnoise  + hxprime_orig
         xprime = xprime - np.dot(kfgain,hxprime.T).T
     elif ss: # use stochastic subsampling to select posterior perturbations.
         pasqrt_inv, painv = symsqrtinv_psd(pa)
         enswts = np.sqrt(nanals2-1)*pasqrt_inv
         xprime_full = np.dot(enswts.T,xprime2)
+        # deterministic sub-sampling
+        #xprime = xprime_full[np.random.choice(nanal2, nanals, replace=False)]
         # stochastic sub-sampling (nanals random linear combos of nanals
         # posterior perturbations)
         #print ((xprime_full**2).sum(axis=0)/(nanals2-1)).mean()
