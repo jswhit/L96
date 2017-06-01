@@ -86,7 +86,7 @@ def serial_ensrf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z):
         xprime  = xprime  - gainfact*kfgain*hxens_orig
     return xmean, xprime
 
-def bulk_ensrf(xmean,xprime,h,obs,oberrvar,covlocal,denkf=True):
+def bulk_ensrf(xmean,xprime,h,obs,oberrvar,covlocal,denkf=False):
     """bulk potter method"""
     nanals, ndim = xprime.shape; nobs = obs.shape[-1]
     R = oberrvar*np.eye(nobs)

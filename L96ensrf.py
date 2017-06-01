@@ -31,6 +31,8 @@ method:  =0 for serial Potter method
          =10 for GETKF (with modulated ensemble)
          =11 for ETKF with modulation ensemble and stochastic subsampling
          =12 for ETKF with modulation ensemble and 'adjusted' perturbed obs
+         =13 for 'DEnKF' approx to ETKF with modulated ensemble
+         =14 for 'DEnKF' approx to bulk potter method.
 
 covinflate1,covinflate2:  (optional) inflation parameters corresponding
 to a and b in Hodyss and Campbell.  If not specified, a=b=1. If covinflate2
@@ -50,7 +52,7 @@ if len(sys.argv) > 5:
     covinflate2 = float(sys.argv[6])
 
 ntstart = 1000 # time steps to spin up truth run
-ntimes = 101000 # ob times
+ntimes = 11000 # ob times
 nens = 8 # ensemble members
 oberrstdev = 0.1; oberrvar = oberrstdev**2 # ob error
 verbose = False # print error stats every time if True
@@ -159,11 +161,15 @@ def ensrf(ensemble,xmean,xprime,h,obs,oberrvar,covlocal,method=1,z=None):
     elif method == 9: # getkf with no localization
         return getkf(xmean,xprime,h,obs,oberrvar)
     elif method == 10: # getkf with modulated ensemble
-        return getkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=rsens,po=True)
+        return getkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z)
     elif method == 11: # etkf using 'modulated' ensemble and stochastic subsample
         return etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=rsens,ss=True)
     elif method == 12: # etkf using 'modulated' ensemble w/ 'adjusted' pert obs
         return etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=rsens,po=True,adjust_obnoise=True)
+    elif method == 13: # 'DEnKF'approx to ETKF with modulated ensemble.
+        return etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,denkf=True)
+    elif method == 14: # 'DEnKF'approx to bulk potter method
+        return bulk_ensrf(xmean,xprime,h,obs,oberrvar,covlocal,denkf=True)
     else:
         raise ValueError('illegal value for enkf method flag')
 
@@ -203,7 +209,7 @@ if corrl < 2*ndim:
     covlocal = 0.5*(covlocal + covlocal.transpose())
 
 # compute square root of covlocal
-if method in [4,5,6,10,11,12]:
+if method in [4,5,6,10,11,12,13]:
     evals, eigs = np.linalg.eigh(covlocal)
     evals = np.where(evals > 1.e-10, evals, 1.e-10)
     evalsum = evals.sum(); neig = 0
