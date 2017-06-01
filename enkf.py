@@ -94,7 +94,10 @@ def bulk_ensrf(xmean,xprime,h,obs,oberrvar,covlocal,denkf=False):
     Pb = np.dot(np.transpose(xprime),xprime)/(nanals-1)
     Pb = covlocal*Pb
     D = np.dot(np.dot(h,Pb),h.T)+R
-    Dsqrt,Dinv = symsqrt_psd(D,inv=True)
+    if not denkf:
+        Dsqrt,Dinv = symsqrt_psd(D,inv=True)
+    else:
+        Dinv = cho_solve(cho_factor(D),np.eye(nobs))
     kfgain = np.dot(np.dot(Pb,h.T),Dinv)
     if not denkf:
         tmp = Dsqrt + Rsqrt
@@ -118,7 +121,7 @@ def bulk_enkf(xmean,xprime,h,obs,oberrvar,covlocal,rs):
     Pb = np.dot(np.transpose(xprime),xprime)/(nanals-1)
     Pb = covlocal*Pb
     D = np.dot(np.dot(h,Pb),h.T)+R
-    Dinv = cho_solve(cho_factor(C),np.eye(nobs))
+    Dinv = cho_solve(cho_factor(D),np.eye(nobs))
     kfgain = np.dot(np.dot(Pb,h.T),Dinv)
     xmean = xmean + np.dot(kfgain, obs-np.dot(h,xmean))
     obnoise = np.sqrt(oberrvar)*rs.standard_normal(size=(nanals,nobs))
