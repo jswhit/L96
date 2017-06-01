@@ -86,7 +86,7 @@ def serial_ensrf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z):
         xprime  = xprime  - gainfact*kfgain*hxens_orig
     return xmean, xprime
 
-def bulk_ensrf(xmean,xprime,h,obs,oberrvar,covlocal):
+def bulk_ensrf(xmean,xprime,h,obs,oberrvar,covlocal,denkf=True):
     """bulk potter method"""
     nanals, ndim = xprime.shape; nobs = obs.shape[-1]
     R = oberrvar*np.eye(nobs)
@@ -96,10 +96,13 @@ def bulk_ensrf(xmean,xprime,h,obs,oberrvar,covlocal):
     D = np.dot(np.dot(h,Pb),h.T)+R
     Dsqrt,Dinv = symsqrt_psd(D,inv=True)
     kfgain = np.dot(np.dot(Pb,h.T),Dinv)
-    tmp = Dsqrt + Rsqrt
-    tmpinv = cho_solve(cho_factor(tmp),np.eye(nobs))
-    gainfact = np.dot(Dsqrt,tmpinv)
-    reducedgain = np.dot(kfgain, gainfact)
+    if not denkf:
+        tmp = Dsqrt + Rsqrt
+        tmpinv = cho_solve(cho_factor(tmp),np.eye(nobs))
+        gainfact = np.dot(Dsqrt,tmpinv)
+        reducedgain = np.dot(kfgain, gainfact)
+    else:
+        reducedgain = 0.5*kfgain
     xmean = xmean + np.dot(kfgain, obs-np.dot(h,xmean))
     hxprime = np.empty((nanals, nobs), xprime.dtype)
     for nanal in range(nanals):
@@ -174,7 +177,7 @@ def getkf(xmean,xprime,h,obs,oberrvar):
     xprime = xprime - np.dot(reducedgain,hxprime.T).T
     return xmean, xprime
 
-def getkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False):
+def getkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z):
     """GETKF with modulated ensemble"""
     nanals, ndim = xprime.shape; nobs = obs.shape[-1]
     if z is None:
@@ -202,12 +205,12 @@ def getkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False):
     painv =  (u * (1./sp)).dot(u.T)
     kfgain = np.dot(xprime2.T,np.dot(painv,YbRsqrtinv*sqrtoberrvar_inv))
     xmean = xmean + np.dot(kfgain, obs-hxmean)
-    reducedgain = np.dot(np.dot(xprime2.T,u)*(1.-np.sqrt((nanals2-1)/sp)),\
-                         (v.T/s).T)*sqrtoberrvar_inv
+    reducedgain = np.dot(xprime2.T,u)*(1.-np.sqrt((nanals2-1)/sp))
+    reducedgain = np.dot(reducedgain, (v.T/s).T)*sqrtoberrvar_inv
     xprime = xprime - np.dot(reducedgain,hxprime_orig.T).T
     return xmean, xprime
 
-def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False,ss=False,adjust_obnoise=False):
+def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False,ss=False,adjust_obnoise=False,denkf=False):
     """ETKF with modulated ensemble."""
     nanals, ndim = xprime.shape; nobs = obs.shape[-1]
     if z is None:
@@ -251,7 +254,9 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False,ss=False
     pasqrt_inv, painv = symsqrtinv_psd(pa)
     kfgain = np.dot(xprime2.T,np.dot(painv,YbRinv))
     xmean = xmean + np.dot(kfgain, obs-hxmean)
-    if po: # use perturbed obs to update ensemble perts
+    if denkf:
+        xprime = xprime - np.dot(0.5*kfgain,hxprime_orig.T).T
+    elif po: # use perturbed obs to update ensemble perts
         if rs is None:
             raise ValueError('must pass random state if po=True')
         # generate obnoise, make sure it has zero mean
