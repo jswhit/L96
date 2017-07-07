@@ -20,6 +20,32 @@ def symsqrtinv_psd(a):
     inv =  (eigs * (1./np.maximum(evals,0))).dot(eigs.T)
     return symsqrtinv, inv
 
+def serial_ensrf_ci(xmean,xprime,h,obs,oberrvar,nmax=200):
+    """serial potter method with CI localization"""
+    nanals, ndim = xprime.shape; nobs = obs.shape[-1]
+    cofn = np.sqrt(nanals-3)/np.sqrt(nmax-3)
+    for nob,ob in zip(np.arange(nobs),obs):
+        # forward operator.
+        hxprime = np.dot(xprime,h[nob])
+        hxmean = np.dot(h[nob],xmean)
+        # state space update
+        hxens = hxprime.reshape((nanals, 1))
+        hpbht = (hxens**2).sum()/(nanals-1)
+        D = hpbht + oberrvar
+        gainfact = np.sqrt(D)/(np.sqrt(D)+np.sqrt(oberrvar))
+        pbvar = (xprime.T**2).sum(axis=1)/float(nanals-1)
+        pbht = (xprime.T*hxens[:,0]).sum(axis=1)/float(nanals-1)
+        corr = pbht/np.sqrt(hpbht*pbvar)
+        corr = corr.clip(-0.999,0.999)
+        corr_rescaled = np.abs(np.tanh(cofn*np.arctanh(corr)))
+        #corr_rescaled = ((1.+corr)**cofn - (1.-corr)**cofn)/\
+        #                ((1.+corr)**cofn + (1.-corr)**cofn)
+        pbht = corr_rescaled*np.sqrt(pbvar*hpbht)
+        kfgain = pbht/D
+        xmean = xmean + kfgain*(ob-hxmean)
+        xprime = xprime - gainfact*kfgain*hxens
+    return xmean, xprime
+
 def serial_ensrf(xmean,xprime,h,obs,oberrvar,covlocal,obcovlocal):
     """serial potter method"""
     nanals, ndim = xprime.shape; nobs = obs.shape[-1]

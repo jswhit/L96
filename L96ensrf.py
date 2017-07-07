@@ -3,7 +3,8 @@ import numpy as np
 import sys
 from L96 import L96
 from enkf import serial_ensrf, bulk_ensrf, etkf, letkf, etkf_modens,\
-                 serial_ensrf_modens, bulk_enkf, getkf, getkf_modens
+                 serial_ensrf_modens, bulk_enkf, getkf, getkf_modens,\
+                 serial_ensrf_ci
 np.seterr(all='raise') # raise error when overflow occurs
 
 if len(sys.argv) < 3:
@@ -33,6 +34,7 @@ method:  =0 for serial Potter method
          =12 for ETKF with modulation ensemble and 'adjusted' perturbed obs
          =13 for 'DEnKF' approx to ETKF with modulated ensemble
          =14 for 'DEnKF' approx to bulk potter method.
+         =15 for serial Potter method with CI localization
 
 covinflate1,covinflate2:  (optional) inflation parameters corresponding
 to a and b in Hodyss and Campbell.  If not specified, a=b=1. If covinflate2
@@ -52,33 +54,27 @@ if len(sys.argv) > 5:
     covinflate2 = float(sys.argv[6])
 
 ntstart = 1000 # time steps to spin up truth run
-ntimes = 11000 # ob times
+ntimes =  6000 # ob times
 nens = 8 # ensemble members
 oberrstdev = 0.1; oberrvar = oberrstdev**2 # ob error
-verbose = False # print error stats every time if True
+verbose = True # print error stats every time if True
 # Gaussian or running average smoothing in H.
 # for running average, smooth_len is half-width of boxcar.
 # for gaussian, smooth_len is standard deviation.
 thresh = 0.99 # threshold for modulated ensemble eigenvalue truncation.
 # model parameters...
 # for truth run
-dt = 0.05; npts = 80
+dt = 0.05; npts = 40
 dtassim = dt # assimilation interval
-diffusion_truth_max = 2.5
-diffusion_truth_min = 0.5
-# for forecast model (same as above for perfect model expt)
-# for simplicity, assume dt and npts stay the same.
-diffusion_max = diffusion_truth_max
-diffusion_min = diffusion_truth_min
 
 rstruth = np.random.RandomState(42) # fixed seed for truth run
 rsens = np.random.RandomState() # varying seed for ob noise and ensemble initial conditions
 
 # model instance for truth (nature) run
 F = 8; deltaF = 1./8.; Fcorr = np.exp(-1)**(1./3.) # efolding over n timesteps, n=3
-model = L96(n=npts,F=F,deltaF=deltaF,Fcorr=Fcorr,dt=dt,diff_max=diffusion_truth_max,diff_min=diffusion_truth_min,rs=rstruth)
+model = L96(n=npts,F=F,deltaF=deltaF,Fcorr=Fcorr,dt=dt)
 # model instance for forecast ensemble
-ensemble = L96(n=npts,F=F,deltaF=deltaF,Fcorr=Fcorr,members=nens,dt=dt,diff_max=diffusion_truth_max,diff_min=diffusion_truth_min,rs=rsens)
+ensemble = L96(n=npts,F=F,deltaF=deltaF,Fcorr=Fcorr,members=nens,dt=dt,rs=rsens)
 for nt in range(ntstart): # spinup truth run
     model.advance()
 
@@ -170,20 +166,15 @@ def ensrf(ensemble,xmean,xprime,h,obs,oberrvar,covlocal,method=1,z=None):
         return etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,denkf=True)
     elif method == 14: # 'DEnKF'approx to bulk potter method
         return bulk_ensrf(xmean,xprime,h,obs,oberrvar,covlocal,denkf=True)
+    elif method == 15: # 'DEnKF'approx to bulk potter method
+        return serial_ensrf_ci(xmean,xprime,h,obs,oberrvar,nmax=covlocal)
     else:
         raise ValueError('illegal value for enkf method flag')
 
 # define localization matrix.
 covlocal = np.eye(ndim)
-# zonally varying localization
-xdep = model.diff_min + (model.diff_max-model.diff_min)*model.blend
-#xdep[:] = 1.0 # set back to constant
-#import matplotlib.pyplot as plt
-#plt.plot(np.arange(80), xdep*corrl)
-#plt.show()
-#raise SystemExit
 # constant localization
-#xdep = np.ones(ndim)
+xdep = np.ones(ndim)
 
 if corrl < 2*ndim:
     for j in range(ndim):
@@ -207,6 +198,7 @@ if corrl < 2*ndim:
             covlocal[j,i]=taper
     # symmetrize the covariance localization matrix
     covlocal = 0.5*(covlocal + covlocal.transpose())
+if method == 15: covlocal = int(corrl)
 
 # compute square root of covlocal
 if method in [4,5,6,10,11,12,13]:
