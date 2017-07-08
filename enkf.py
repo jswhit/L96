@@ -37,7 +37,8 @@ def serial_ensrf_ci(xmean,xprime,h,obs,oberrvar,nmax=200):
         pbht = (xprime.T*hxens[:,0]).sum(axis=1)/float(nanals-1)
         corr = pbht/np.sqrt(hpbht*pbvar)
         corr = corr.clip(-0.999,0.999)
-        corr_rescaled = np.abs(np.tanh(cofn*np.arctanh(corr)))
+        #corrmax = max(np.abs(corr.min()), corr.max())
+        corr_rescaled = np.tanh(cofn*np.arctanh(corr))
         #corr_rescaled = ((1.+corr)**cofn - (1.-corr)**cofn)/\
         #                ((1.+corr)**cofn + (1.-corr)**cofn)
         pbht = corr_rescaled*np.sqrt(pbvar*hpbht)
