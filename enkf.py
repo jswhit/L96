@@ -1,5 +1,4 @@
 import numpy as np
-#from numpy.linalg import eigh # scipy.linalg.eigh broken on my mac
 from scipy.linalg import eigh, cho_solve, cho_factor, svd, pinvh
 
 def symsqrt_psd(a, inv=False):
@@ -255,8 +254,11 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False,ss=False
     YbRinv = np.dot(hxprime,(1./oberrvar)*np.eye(nobs))
     pa = (nanals2-1)*np.eye(nanals2)+np.dot(YbRinv,hxprime.T)
     pasqrt_inv, painv = symsqrtinv_psd(pa)
-    kfgain = np.dot(xprime2.T,np.dot(painv,YbRinv))
+    kfgain = np.dot(xprime2.T,wa)
     xmean = xmean + np.dot(kfgain, obs-hxmean)
+    # this is equivalent
+    #wa = np.dot(np.dot(painv,YbRinv),obs-hxmean)
+    #xmean = xmean + np.dot(xprime2.T,wa)
     if denkf:
         xprime = xprime - np.dot(0.5*kfgain,hxprime_orig.T).T
     elif po: # use perturbed obs to update ensemble perts
@@ -305,26 +307,17 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False,ss=False
         #raise SystemExit
         xprime = xprime - xprime.mean(axis=0)
     else:
-        # compute reduced gain to update perts
-        #D = np.dot(hxprime.T, hxprime)/(nanals2-1) + oberrvar*np.eye(nobs)
-        #Dsqrt = symsqrt_psd(D) # symmetric square root of pos-def sym matrix
-        #tmp = Dsqrt + np.sqrt(oberrvar)*np.eye(nobs)
-        #tmpinv = cho_solve(cho_factor(tmp),np.eye(nobs))
-        #gainfact = np.dot(Dsqrt,tmpinv)
-        #kfgain = np.dot(kfgain, gainfact)
-        #hxprime = hxprime[0:nanals]/scalefact
-        #xprime = xprime - np.dot(kfgain,hxprime.T).T
         # update modulated ensemble perts with ETKF weights
         pasqrt_inv, painv = symsqrtinv_psd(pa)
         enswts = np.sqrt(nanals2-1)*pasqrt_inv
-        # just use 1st nanals posterior members, rescaled.
+        # just use 1st nanals posterior members, de-modulated.
         #xprime2 = np.dot(enswts.T,xprime2)
         #xprime = xprime2[0:nanals]/scalefact
         # this is equivalent, but a little faster
         xprime = np.dot(enswts[:,0:nanals].T,xprime2)/scalefact
         #xprime_mean = np.abs(xprime.mean(axis=0))
         #xprime = xprime-xprime_mean
-        # make sure mean of posterior perts is zero
+        ## make sure mean of posterior perts is zero
         #if xprime_mean.max() > 1.e-6:
         #    raise ValueError('nonzero perturbation mean')
 
