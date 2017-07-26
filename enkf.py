@@ -254,7 +254,7 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False,ss=False
     YbRinv = np.dot(hxprime,(1./oberrvar)*np.eye(nobs))
     pa = (nanals2-1)*np.eye(nanals2)+np.dot(YbRinv,hxprime.T)
     pasqrt_inv, painv = symsqrtinv_psd(pa)
-    kfgain = np.dot(xprime2.T,wa)
+    kfgain = np.dot(xprime2.T,np.dot(painv,YbRinv))
     xmean = xmean + np.dot(kfgain, obs-hxmean)
     # this is equivalent
     #wa = np.dot(np.dot(painv,YbRinv),obs-hxmean)
