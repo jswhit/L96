@@ -62,23 +62,17 @@ verbose = False # print error stats every time if True
 thresh = 0.99 # threshold for modulated ensemble eigenvalue truncation.
 # model parameters...
 # for truth run
-dt = 0.05; npts = 80
+dt = 0.05; npts = 40
 dtassim = dt # assimilation interval
-diffusion_truth_max = 2.5
-diffusion_truth_min = 0.5
-# for forecast model (same as above for perfect model expt)
-# for simplicity, assume dt and npts stay the same.
-diffusion_max = diffusion_truth_max
-diffusion_min = diffusion_truth_min
 
 rstruth = np.random.RandomState(42) # fixed seed for truth run
 rsens = np.random.RandomState() # varying seed for ob noise and ensemble initial conditions
 
 # model instance for truth (nature) run
 F = 8; deltaF = 1./8.; Fcorr = np.exp(-1)**(1./3.) # efolding over n timesteps, n=3
-model = L96(n=npts,F=F,deltaF=deltaF,Fcorr=Fcorr,dt=dt,diff_max=diffusion_truth_max,diff_min=diffusion_truth_min,rs=rstruth)
+model = L96(n=npts,F=F,deltaF=deltaF,Fcorr=Fcorr,dt=dt,rs=rstruth)
 # model instance for forecast ensemble
-ensemble = L96(n=npts,F=F,deltaF=deltaF,Fcorr=Fcorr,members=nens,dt=dt,diff_max=diffusion_truth_max,diff_min=diffusion_truth_min,rs=rsens)
+ensemble = L96(n=npts,F=F,deltaF=deltaF,Fcorr=Fcorr,members=nens,dt=dt,rs=rsens)
 for nt in range(ntstart): # spinup truth run
     model.advance()
 
@@ -175,15 +169,6 @@ def ensrf(ensemble,xmean,xprime,h,obs,oberrvar,covlocal,method=1,z=None):
 
 # define localization matrix.
 covlocal = np.eye(ndim)
-# zonally varying localization
-xdep = model.diff_min + (model.diff_max-model.diff_min)*model.blend
-#xdep[:] = 1.0 # set back to constant
-#import matplotlib.pyplot as plt
-#plt.plot(np.arange(80), xdep*corrl)
-#plt.show()
-#raise SystemExit
-# constant localization
-#xdep = np.ones(ndim)
 
 if corrl < 2*ndim:
     for j in range(ndim):
@@ -191,7 +176,7 @@ if corrl < 2*ndim:
             rr = float(i-j)
             if i-j < -(ndim/2): rr = float(ndim-j+i)
             if i-j > (ndim/2): rr = float(i-ndim-j)
-            r = np.fabs(rr)/(xdep[i]*corrl); taper = 0.0
+            r = np.fabs(rr)/corrl; taper = 0.0
             # Bohman taper (Gneiting 2002, doi:10.1006/jmva.2001.2056,
             # equation, eq 21)
             #if r < 1.:

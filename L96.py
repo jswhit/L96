@@ -5,16 +5,14 @@ import numpy as np
 
 class L96:
 
-    def __init__(self,members=1,n=40,dt=0.05,diff_max=1.0,diff_min=1.0,F=8,deltaF=0,Fcorr=1.,rs=None):
+    def __init__(self,members=1,n=40,dt=0.05,F=8,deltaF=0,Fcorr=1.,rs=None):
         self.n = n; self.dt = dt
-        self.diff_max = diff_max; self.diff_min = diff_min
         self.F = F; self.members = members
         self.deltaF = deltaF; self.Fcorr = Fcorr
         if rs is None:
             rs = np.random.RandomState()
         self.rs = rs
         self.x = F+0.1*self.rs.standard_normal(size=(members,n))
-        self.blend = np.cos(np.linspace(0,np.pi,n))**4
         self.xwrap = np.zeros((self.members,self.n+3), np.float)
         if self.deltaF == 0:
             self.forcing = self.F
@@ -30,8 +28,7 @@ class L96:
 
     def dxdt(self):
         xm2,xm1,xp1 = self.shiftx()
-        return (xp1-xm2)*xm1 - \
-        (self.diff_min+(self.diff_max-self.diff_min)*self.blend)*self.x + self.forcing
+        return (xp1-xm2)*xm1 - self.x + self.forcing
 
     def advance(self):
         # gamma distributed forcing with mean = self.F.  Approaches constant
