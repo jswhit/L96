@@ -40,9 +40,6 @@ def serial_ensrf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z):
     """serial potter method"""
     nanals, ndim = xprime.shape; nobs = obs.shape[-1]
 
-    # if True, use gain from modulated ensemble to
-    # update perts.  if False, use gain from original ensemble.
-    update_xprime = True
     if z is None:
         # set ensemble to square root of localized Pb
         Pb = covlocal*np.dot(xprime.T,xprime)/(nanals-1)
@@ -59,7 +56,6 @@ def serial_ensrf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z):
                 xprime2[nanal2,:] = xprime[nanal,:]*z[neig-j-1,:]
                 # unmodulated member is j=1, scaled by z[-1]
                 nanal2 += 1
-        xprime2 = np.sqrt(float(nanals2-1)/float(nanals-1))*xprime2
 
     # update xmean using full xprime2
     # update original xprime using gain from full xprime2
@@ -77,11 +73,6 @@ def serial_ensrf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z):
         kfgain = pbht/D
         xmean = xmean + kfgain*(ob-hxmean)
         xprime2 = xprime2 - gainfact*kfgain*hxens
-        if not update_xprime:
-            D = (hxens_orig**2).sum()/(nanals-1) + oberrvar
-            gainfact = np.sqrt(D)/(np.sqrt(D)+np.sqrt(oberrvar))
-            pbht = (xprime.T*hxens_orig[:,0]).sum(axis=1)/float(nanals-1)
-            kfgain = covlocal[nob,:]*pbht/D
         xprime  = xprime  - gainfact*kfgain*hxens_orig
     return xmean, xprime
 
@@ -191,7 +182,6 @@ def getkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z):
         for nanal in range(nanals):
             xprime2[nanal2,:] = xprime[nanal,:]*z[neig-j-1,:]
             nanal2 += 1
-    xprime2 = np.sqrt(float(nanals2-1)/float(nanals-1))*xprime2
     # forward operator.
     hxprime = np.empty((nanals2, nobs), xprime2.dtype)
     hxprime_orig = np.empty((nanals, nobs), xprime.dtype)
@@ -224,13 +214,9 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False,ss=False
         for nanal in range(nanals):
             xprime2[nanal2,:] = xprime[nanal,:]*z[neig-j-1,:]
             nanal2 += 1
-    normfact = np.sqrt(float(nanals2-1)/float(nanals-1))
-    xprime2 = normfact*xprime2
-    #var = ((xprime**2).sum(axis=0)/(nanals-1)).mean()
-    #var2 = ((xprime2**2).sum(axis=0)/(nanals2-1)).mean()
     # 1st nanals members are original members multiplied by scalefact
     # (which is proportional to 1st eigenvector of cov local matrix)
-    scalefact = normfact*z[-1]
+    scalefact = z[-1]
     #import matplotlib.pyplot as plt
     #plt.plot(np.arange(80), z[-1])
     #plt.title('1st eigenvector of localization matrix')

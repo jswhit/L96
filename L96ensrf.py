@@ -205,6 +205,7 @@ if method in [4,5,6,10,11,12,13]:
     #print 'neig = ',neig
     zz = (eigs*np.sqrt(evals/frac)).T
     z = zz[ndim-neig:ndim,:]
+    z = np.sqrt((nens*neig-1)/(nens-1))*z
 else:
     neig = 0
     z = None
